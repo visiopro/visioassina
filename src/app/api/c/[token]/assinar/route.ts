@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { conferirCodigo, hashPdf } from "@/lib/codigo";
 import { documentoValido, type Campo } from "@/lib/contrato";
 import { gerarPdfContrato } from "@/lib/pdf/contrato";
 import { ipDaRequisicao } from "@/lib/requisicao";
 import { linkVerificacao } from "@/lib/formato";
+import { notificarIntegracao } from "@/lib/integracao";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -86,5 +87,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     .neq("status", "assinado");
 
   await admin.from("eventos").insert({ contrato_id: c.id, acao: "assinado", ip, agente, detalhes: { hash, documento: documento || null } });
+  if (c.integracao_id) after(() => notificarIntegracao(c.id, "assinado"));
   return NextResponse.json({ ok: true, codigo_verificacao: c.codigo_verificacao });
 }

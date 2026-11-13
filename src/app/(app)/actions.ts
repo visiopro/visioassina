@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notificarIntegracao } from "@/lib/integracao";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { enviarLinkContrato } from "@/lib/whatsapp";
@@ -131,6 +133,7 @@ export async function cancelarContrato(id: string): Promise<Estado> {
   const { data } = await supabase.from("contratos").update({ status: "cancelado" }).eq("id", id).neq("status", "assinado").select("id").maybeSingle();
   if (!data) return { erro: "Contrato assinado não pode ser cancelado." };
   await supabase.from("eventos").insert({ contrato_id: id, acao: "cancelado" });
+  after(() => notificarIntegracao(id, "cancelado"));
   revalidatePath(`/contratos/${id}`);
   return { ok: "Contrato cancelado." };
 }
