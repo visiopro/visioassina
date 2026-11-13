@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { after } from "next/server";
+import { notificarIntegracao } from "@/lib/integracao";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hojeBR } from "@/lib/formato";
 import type { Campo } from "@/lib/contrato";
@@ -25,6 +27,7 @@ export default async function Assinar({ params }: { params: Promise<{ token: str
   if (c.status === "enviado") {
     await admin.from("contratos").update({ status: "visualizado", visualizado_em: new Date().toISOString() }).eq("id", c.id);
     await admin.from("eventos").insert({ contrato_id: c.id, acao: "visualizado" });
+    if (c.integracao_id) after(() => notificarIntegracao(c.id, "visualizado"));
   }
 
   const expirado = !!c.expira_em && c.expira_em < hojeBR() && c.status !== "assinado";
